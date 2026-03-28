@@ -79,17 +79,13 @@ async function buildChatObject(chatRow, userId) {
     };
   }
 
-  // Unread count for the requesting user
+  // Unread count: messages from others that arrived after the user's last read timestamp
   const unreadRes = await query(
     `SELECT COUNT(*) AS cnt FROM messages m
      WHERE m.chat_id = $1
        AND m.sender_id != $2
-       AND m.id NOT IN (
-         SELECT mr.message_id FROM message_reads mr
-         WHERE mr.chat_id = $1 AND mr.user_id = $2
-       )
        AND m.created_at > COALESCE(
-         (SELECT mr2.read_at FROM message_reads mr2 WHERE mr2.chat_id = $1 AND mr2.user_id = $2),
+         (SELECT mr.read_at FROM message_reads mr WHERE mr.chat_id = $1 AND mr.user_id = $2),
          '1970-01-01'::TIMESTAMPTZ
        )`,
     [chatRow.id, userId],
@@ -459,6 +455,62 @@ async function chatRoutes(fastify) {
       return reply.status(204).send();
     },
   );
+
+  // -------------------------------------------------------------------------
+  // DELETE /api/v1/chats/:id/messages  — clear all messages in a chat
+  // -------------------------------------------------------------------------
+  fastify.delete('/api/v1/chats/:id/messages', { preHandler: authenticate }, async (request, reply) => {
+    const { id: chatId } = request.params;
+
+    const admin = await assertChatAdmin(request, reply, chatId);
+    if (!admin) return;
+
+    await query('DELETE FROM messages WHERE chat_id = $1', [chatId]);
+
+    // Broadcast chat.cleared so clients remove messages from UI
+    await publishToChat(chatId, {
+      type: 'chat.cleared',
+      payload: { chat_id: chatId },
+    });
+
+    return reply.status(204).send();
+  });
+
+  // -------------------------------------------------------------------------
+  // DELETE /api/v1/chats/:id  — delete entire chat
+  // -------------------------------------------------------------------------
+  fastify.delete('/api/v1/chats/:id', { preHandler: authenticate }, async (request, reply) => {
+    const { id: chatId } = request.params;
+
+    const admin = await assertChatAdmin(request, reply, chatId);
+    if (!admin) return;
+
+    // Collect member IDs before deleting so we can notify them
+    const { rows: memberRows } = await query(
+      'SELECT user_id FROM chat_members WHERE chat_id = $1',
+      [chatId],
+    );
+    const memberIds = memberRows.map((r) => r.user_id);
+
+    // Broadcast chat.deleted to all members before the rows are gone
+    await publishToChat(chatId, {
+      type: 'chat.deleted',
+      payload: { chat_id: chatId },
+    });
+
+    // Delete chat — cascades to chat_members, messages, message_reads, message_reactions
+    await query('DELETE FROM chats WHERE id = $1', [chatId]);
+
+    // Also notify each member via their personal channel in case they are not
+    // subscribed to the chat channel anymore (e.g. after leaving)
+    await Promise.all(
+      memberIds.map((uid) =>
+        publishToUser(uid, { type: 'chat.deleted', payload: { chat_id: chatId } }),
+      ),
+    );
+
+    return reply.status(204).send();
+  });
 }
 
 module.exports = chatRoutes;
