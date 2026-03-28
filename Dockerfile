@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Copy package manifest first for better layer caching
-COPY package.json ./
+COPY package.json package-lock.json ./
 
 # Install production dependencies
 # sharp needs --ignore-scripts=false to run its install script
