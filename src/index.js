@@ -13,6 +13,7 @@ const fastify = require('fastify')({
 });
 
 const config = require('./config');
+const { runMigrations } = require('./db');
 
 // ---------------------------------------------------------------------------
 // Plugin registrations
@@ -100,6 +101,7 @@ fastify.setErrorHandler((err, request, reply) => {
 
 async function start() {
   try {
+    await runMigrations();
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
     fastify.log.info(`Flux server listening on port ${config.port}`);
   } catch (err) {

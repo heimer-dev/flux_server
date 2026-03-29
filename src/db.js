@@ -66,4 +66,29 @@ async function healthCheck() {
   return res.rowCount === 1;
 }
 
-module.exports = { query, getClient, withTransaction, healthCheck, pool };
+/**
+ * Run all migrations idempotently on startup.
+ * Uses IF NOT EXISTS / CREATE EXTENSION IF NOT EXISTS so it is safe to call
+ * every time the app boots, even if the schema already exists.
+ */
+async function runMigrations() {
+  const fs = require('fs');
+  const path = require('path');
+  const sql = fs.readFileSync(path.join(__dirname, '../migrations/001_initial.sql'), 'utf8');
+  const client = await pool.connect();
+  try {
+    await client.query(sql);
+    console.log('[db] Migrations applied successfully');
+  } catch (err) {
+    // Ignore "already exists" errors — tables/indexes were created in a prior run
+    if (err.code === '42P07' || err.code === '42710') {
+      console.log('[db] Migrations already applied, skipping');
+    } else {
+      throw err;
+    }
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { query, getClient, withTransaction, healthCheck, runMigrations, pool };
