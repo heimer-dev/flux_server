@@ -18,11 +18,11 @@ const config = {
   },
 
   rateLimits: {
-    register: { points: 5, duration: 60 * 60 },         // 5/hour per IP
-    login: { points: 10, duration: 60 },                 // 10/min per IP
-    sendMessage: { points: 60, duration: 60 },           // 60/min per user
-    uploadAvatar: { points: 10, duration: 60 * 60 },     // 10/hour per user
-    uploadMedia: { points: 30, duration: 60 * 60 },      // 30/hour per user
+    register:    { points: parseInt(process.env.RL_REGISTER    || '100', 10), duration: 60 * 60 }, // 100/hour per IP
+    login:       { points: parseInt(process.env.RL_LOGIN       || '30',  10), duration: 60 },      // 30/min per IP
+    sendMessage: { points: parseInt(process.env.RL_MESSAGE     || '60',  10), duration: 60 },      // 60/min per user
+    uploadAvatar:{ points: parseInt(process.env.RL_AVATAR      || '10',  10), duration: 60 * 60 }, // 10/hour per user
+    uploadMedia: { points: parseInt(process.env.RL_MEDIA       || '30',  10), duration: 60 * 60 }, // 30/hour per user
   },
 
   uploads: {
