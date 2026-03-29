@@ -24,6 +24,7 @@ RUN npm ci --omit=dev
 # Copy application source
 COPY src/ ./src/
 COPY migrations/ ./migrations/
+COPY public/ ./public/
 
 # Create uploads directory with correct permissions
 RUN mkdir -p /uploads && chown node:node /uploads

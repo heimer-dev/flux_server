@@ -35,6 +35,12 @@ fastify.register(require('@fastify/multipart'), {
 // WebSocket support
 fastify.register(require('@fastify/websocket'));
 
+// Static file serving for the web UI
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, '../public'),
+  prefix: '/',
+});
+
 // Static file serving for uploads
 fastify.register(require('@fastify/static'), {
   root: config.uploadDir,
