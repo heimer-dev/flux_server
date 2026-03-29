@@ -29,6 +29,29 @@ const chatView      = $('chat-view');
 const loadMoreWrap  = $('load-more-btn-wrap');
 const loadMoreBtn   = $('load-more-btn');
 
+// ── Utils: UUID + Toast ────────────────────────────────────────────────────
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for plain-HTTP / older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function showToast(message, type = 'error') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = message;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 4000);
+}
+
 // ── API helper ─────────────────────────────────────────────────────────────
 async function api(method, path, body) {
   const opts = {
@@ -376,7 +399,7 @@ async function sendMessage() {
   const content = messageInput.value.trim();
   if (!content) return;
 
-  const clientId = crypto.randomUUID();
+  const clientId = generateUUID();
   messageInput.value = '';
   messageInput.style.height = 'auto';
 
@@ -411,7 +434,7 @@ async function sendMessage() {
   } catch (err) {
     // Remove optimistic on error
     removeOptimistic(currentChatId, clientId);
-    alert('Nachricht konnte nicht gesendet werden: ' + err.message);
+    showToast('Nachricht konnte nicht gesendet werden: ' + err.message);
   }
 }
 
@@ -441,7 +464,7 @@ $('file-input').addEventListener('change', async (e) => {
       client_id: crypto.randomUUID(),
     });
   } catch (err) {
-    alert('Datei-Upload fehlgeschlagen: ' + err.message);
+    showToast('Datei-Upload fehlgeschlagen: ' + err.message);
   }
 });
 
@@ -827,8 +850,8 @@ function renderSelectedMembers() {
 
 $('create-group-btn').addEventListener('click', async () => {
   const name = $('group-name-input').value.trim();
-  if (!name) { alert('Gruppenname eingeben'); return; }
-  if (!selectedGroupMembers.length) { alert('Mindestens ein Mitglied auswählen'); return; }
+  if (!name) { showToast('Gruppenname eingeben', 'info'); return; }
+  if (!selectedGroupMembers.length) { showToast('Mindestens ein Mitglied auswählen', 'info'); return; }
 
   try {
     const data = await api('POST', '/chats/group', {

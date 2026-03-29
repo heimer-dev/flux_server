@@ -611,3 +611,26 @@ body {
   .back-btn { display: flex !important; }
   .chat-view:not(.hidden) ~ .sidebar { display: none; }
 }
+
+/* ── Toast notifications ───────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity .25s, transform .25s;
+  z-index: 999;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast-error { background: var(--danger); color: #fff; }
+.toast-info  { background: var(--bg4); color: var(--text); border: 1px solid var(--border); }
+.toast-success { background: var(--online); color: #fff; }
